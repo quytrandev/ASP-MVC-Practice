@@ -1,0 +1,207 @@
+﻿@model List<DBProvider.Users>
+@{
+    ViewBag.Title = "Home Page";
+}
+
+<div class="jumbotron">
+
+    <table id="UserList" border="1" cellpadding="2" cellspacing="2">
+        <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Password</th>
+            <th>Action</th>
+        </tr>
+        @foreach (var item in Model)
+        {
+            <tr id="tr_@item.ID">
+                <td class="id">@item.ID</td>
+                <td class="username">@item.username</td>
+                <td>@item.password</td>
+                <td>
+                    <a class="glyphicon glyphicon-plus" href="javascript:BeginEdit('@item.ID','@item.username')" role="button"></a>
+                    <a class="glyphicon glyphicon-trash " style="color:red" href="javascript:Delete('@item.ID','@item.username')" role="button"></a>
+                </td>
+            </tr>
+        }
+    </table>
+    <h2 id="title">Add a row</h2>
+    <input type="text" id="txtUsername" placeholder="Input username..." /> <br />
+    <input type="password" id="txtPassword" placeholder="Input password..." /> <br />
+    <input type="password" id="txtPassword2" placeholder="Confirm password..." /> <br />
+    
+    <div style="padding:5px; border:1px; solid #fff; width:60px; text-align:center" onclick="AddOrEdit()">Save</div>
+    <p id="alertLabel" style="padding:8px; border:1px solid #00ff90; display:none"></p>
+    
+    <script>
+        var flag = false; //true = edit; false = add;
+        var editID = '';
+        //
+        function AddOrEdit()
+        {
+            if (flag)
+            {
+                SaveEdit();
+            }
+            else
+            {
+                AddNewUser();
+            }
+        }
+        //
+        
+        function AddNewUser() {
+            var username = $('#txtUsername').val();
+            var password = $('#txtPassword').val();
+            var confirmPassword = $('#txtPassword2').val();
+
+            if (username == '' || password == '' || confirmPassword == '')
+            {
+                $('#alertLabel').html('Fields cannot be empty');
+                $('#alertLabel').css('border-color', 'red');
+                $('#alertLabel').css('color', 'red');
+                $('#alertLabel').css('display', 'block');
+                return;
+            }
+            else if (password != confirmPassword)
+            {
+                $('#alertLabel').html('Passwords does not match');
+                $('#alertLabel').css('border-color', 'red');
+                $('#alertLabel').css('color', 'red');
+                $('#alertLabel').css('display', 'block');
+                return;
+            }
+            //Ajax
+            var form = new FormData();
+            form.append("username", username);
+            form.append("password", password);
+            //Ajax request
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", domain + '/Home/AddUser', true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    var content = xhr.responseText;
+                    var jsonContent = JSON.parse(content);
+                    if (jsonContent.Data.status == "OK")
+                    {
+                        var tr = '<tr><td>' + username + '</td><td>' + password + '</td></tr>';
+                        $('#UserList').append(tr);
+                        $('#alertLabel').html('Successfully added');
+                        $('#alertLabel').css('border-color', '#00ff90');
+                        $('#alertLabel').css('color', '#00ff90');
+                        $('#alertLabel').css('display', 'block');
+
+                        $('#txtUsername').val('');
+                        $('#txtPassword').val('');
+                    }
+                    else
+                    {
+                        $('#alertLabel').html(jsonContent.Data.message);
+                        $('#alertLabel').css('border-color', 'red');
+                        $('#alertLabel').css('color', 'red');
+                        $('#alertLabel').css('display', 'block');
+                    }
+                }
+            }
+            xhr.send(form);
+        }
+
+        function Delete(id, username) {
+            if (confirm('Are you sure want to delete this data?'))
+            {
+                var form = new FormData();
+                form.append('id', id);
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", domain + '/Home/DeleteUser', true);
+                xhr.onreadystatechange = function ()
+                {
+                    if (xhr.readyState == 4 && xhr.status == 200)
+                    {
+                        var content = xhr.responseText;
+                        var jsonContent = JSON.parse(content);
+                        if (jsonContent.Data.status == "OK")
+                        {
+                            $('#tr_' + id).remove();
+                        }
+                        else
+                        {
+                            alert(jsonContent.Data.message);
+                        }
+                    }
+                }
+                xhr.send(form);
+            }
+        }
+
+        function BeginEdit(id, username)
+        {
+            flag = true;
+            $('#title').html('Edit a row');
+
+            $('#txtUsername').val(username);
+            editID = id;
+
+        }
+
+        function SaveEdit() {
+            var username = $('#txtUsername').val();
+            var password = $('#txtPassword').val();
+            var confirmPassword = $('#txtPassword2').val();
+            
+
+            if (username == '' ) {
+                $('#alertLabel').html('Fields cannot be empty');
+                $('#alertLabel').css('border-color', 'red');
+                $('#alertLabel').css('color', 'red');
+                $('#alertLabel').css('display', 'block');
+                return;
+            }
+            else if (password != '' && password != confirmPassword) {
+                $('#alertLabel').html('Passwords does not match');
+                $('#alertLabel').css('border-color', 'red');
+                $('#alertLabel').css('color', 'red');
+                $('#alertLabel').css('display', 'block');
+                return;
+            }
+            //Ajax
+            var form = new FormData();
+            form.append("id", editID);
+            form.append("username", username);
+            form.append("password", password);
+            //Ajax request
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", domain + '/Home/EditUser', true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    var content = xhr.responseText;
+                    var jsonContent = JSON.parse(content);
+                    if (jsonContent.Data.status == "OK") {
+                        $('#tr_' + editID + ' .username').html(username);
+                        if (password != '') {
+                            $('#tr_' + editID + ' .password').html(password);
+                        }
+                        //Notification
+                        $('#UserList').append(tr);
+                        $('#alertLabel').html('Successfully edited');
+                        $('#alertLabel').css('border-color', '#00ff90');
+                        $('#alertLabel').css('color', '#00ff90');
+                        $('#alertLabel').css('display', 'block');
+                        //Clear data
+                        $('#txtUsername').val('');
+                        $('#txtPassword').val('');
+                        //Set
+                        flag = false;
+                        editID = '';
+                        $('#title').html('Add a new row');
+                    }
+                    else {
+                        $('#alertLabel').html(jsonContent.Data.message);
+                        $('#alertLabel').css('border-color', 'red');
+                        $('#alertLabel').css('color', 'red');
+                        $('#alertLabel').css('display', 'block');
+                    }
+                }
+            }
+            xhr.send(form);
+        }
+    </script>
